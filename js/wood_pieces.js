@@ -177,3 +177,7 @@ wood_f = [
   [6,1,1],
   [7,1,1],
 ]
+
+// wood_a.forEach(function(coord) {
+//   drawBox(coord, new THREE.Color( 0xff0000 ));
+// });
