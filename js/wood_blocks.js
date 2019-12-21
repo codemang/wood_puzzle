@@ -1,4 +1,4 @@
-wood_a = [
+wood1 = [
   [0,0,0],
   [1,0,0],
   [2,0,0],
@@ -29,7 +29,7 @@ wood_a = [
   [7,1,1],
 ]
 
-wood_b = [
+wood2 = [
   [0,0,0],
   [1,0,0],
   [6,0,0],
@@ -58,7 +58,7 @@ wood_b = [
   [7,1,1],
 ]
 
-wood_c = [
+wood3 = [
   [0,0,0],
   [1,0,0],
   [2,0,0],
@@ -88,7 +88,7 @@ wood_c = [
   [7,1,1],
 ]
 
-wood_d = [
+wood4 = [
   [0,0,0],
   [1,0,0],
   [2,0,0],
@@ -116,7 +116,7 @@ wood_d = [
   [7,1,1],
 ]
 
-wood_e = [
+wood5 = [
   [0,0,0],
   [1,0,0],
   [2,0,0],
@@ -146,7 +146,7 @@ wood_e = [
   [7,1,1],
 ]
 
-wood_f = [
+wood6 = [
   [0,0,0],
   [1,0,0],
   [2,0,0],
@@ -178,6 +178,17 @@ wood_f = [
   [7,1,1],
 ]
 
-// wood_a.forEach(function(coord) {
-//   drawBox(coord, new THREE.Color( 0xff0000 ));
-// });
+woodBlocks = [
+  wood1,
+  wood2,
+  wood3,
+  wood4,
+  wood5,
+  wood6,
+]
+
+function drawBlock(block, color = 0xff0000) {
+  block.forEach(function(vertex) {
+    drawBox(vertex, color);
+  });
+}

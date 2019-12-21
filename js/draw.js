@@ -1,6 +1,6 @@
-function drawBox(position, color) {
+function drawBox(position, hexColor) {
   var geometry = new THREE.BoxGeometry(1,1,1);
-  var material = new THREE.MeshBasicMaterial({ color: color });
+  var material = new THREE.MeshBasicMaterial({ color: new THREE.Color(hexColor) });
   var cube = new THREE.Mesh( geometry, material );
   scene.add( cube );
   cube.position.x = position[0]
