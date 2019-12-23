@@ -188,7 +188,11 @@ woodBlocks = [
 ]
 
 function drawBlock(block, color = 0xff0000) {
-  block.forEach(function(vertex) {
-    drawBox(vertex, color);
+  block.forEach(function(vertex, index) {
+    var newColor = color;
+    if (index === 5) {
+      newColor = 0xff0000;
+    }
+    drawBox(vertex, newColor);
   });
 }

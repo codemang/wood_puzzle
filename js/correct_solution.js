@@ -1,29 +1,29 @@
-final1 = {
+var final1 = {
   startPoint: [0,0,0],
   direction: 'x',
 };
-final2 = {
+var final2 = {
   startPoint: [0,0,2],
   direction: 'x',
 };
-final5 = {
+var final5 = {
   startPoint: [3,-1,-2],
   direction: 'z',
 };
-final6 = {
+var final6 = {
   startPoint: [3,1,-2],
   direction: 'z',
 };
-final3 = {
+var final3 = {
   startPoint: [2,-3, 1],
   direction: 'y',
 };
-final4 = {
+var final4 = {
   startPoint: [4,-3,1],
   direction: 'y',
 };
 
-finalPositions = [
+var finalPositions = [
   final1,
   final2,
   final3,
@@ -65,13 +65,13 @@ var colors = [
 
 var colorIndex = 0;
 
-_.flatten([
-  // generateVertices(final1),
-  // generateVertices(final2),
-  // generateVertices(final3),
-  // generateVertices(final4),
-  // generateVertices(final5),
-  generateVertices(final6),
-]).forEach(function(coord) {
-  drawBox(coord, 0xffa500);
-})
+// _.flatten([
+//   // generateVertices(final1),
+//   // generateVertices(final2),
+//   // generateVertices(final3),
+//   // generateVertices(final4),
+//   // generateVertices(final5),
+//   // generateVertices(final6),
+// ]).forEach(function(coord) {
+//   drawBox(coord, 0xffa500);
+// })
