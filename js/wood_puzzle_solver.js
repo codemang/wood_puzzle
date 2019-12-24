@@ -1,25 +1,5 @@
 var blocks = [0,1,2,3,4,5]
 
-var finalPositionToWoodBlockMatching = {
-  0: null,
-  1: null,
-  2: null,
-  3: null,
-  4: null,
-  5: null,
-};
-
-var orientations = {
-  0: null,
-  1: null,
-  2: null,
-  3: null,
-  4: null,
-  5: null,
-}
-
-var blockSolutions = []
-
 function calculateFinalPositionCenter(finalPosition) {
   if (finalPosition.direction === 'x') {
     return [finalPosition.startPoint[0] + 3.5, finalPosition.startPoint[1] + 0.5, finalPosition.startPoint[2] + 0.5]
@@ -109,22 +89,17 @@ function orientBlock(block, finalPositionIndex, orientation) {
     finalBlocks.push(result)
   });
 
-
   return finalBlocks;
 }
 
-overlapCount = 0;
-function checkSolution() {
+function checkSolution(blockSolutionsTemp) {
   var uniquenessHash = {}
   var noOverlap = true;
-  _.forEach(blockSolutions, function(blockSolution) {
+
+  _.forEach(blockSolutionsTemp, function(blockSolution) {
     _.forEach(blockSolution, function(vertex) {
       var name = _.join(_.map(vertex, Math.round), '-');
       if (uniquenessHash[name]) {
-        overlapCount += 1;
-        if (overlapCount % 1000 === 0) {
-          // console.log("Overlap");
-        }
         noOverlap = false;
         return false;
       } else {
@@ -140,79 +115,35 @@ function checkSolution() {
   return noOverlap;
 }
 
-function undoSolution() {
-
-}
-
-function permutateOrientations(finalPositionNumber = 0) {
-  var blockIndex = finalPositionToWoodBlockMatching[finalPositionNumber];
-
-  if (blockIndex === undefined) {
-    var solution = checkSolution();
-    if (solution) {
-      // blockSolutions.forEach(function(block) {
-      //   drawBlock(block)
-      // });
-      console.log("Found");
-      return;
-      // undoSolution();
-      // exit
-    } else {
-      return;
-    }
+function permutateOrientations(blocks, callback, orientations = {}, blockToOrientIndex = 0, blockSolutions = []) {
+  if (blockToOrientIndex === blocks.length) {
+    callback(blockSolutions)
+    return;
   }
 
+  var blockName = blocks[blockToOrientIndex];
+
   [0,1,2,3,4,5,6,7].forEach(function(orientation) {
-    orientations[finalPositionNumber] = orientation
-    var movedBlock = moveBlockToFinalPosition(blockIndex, finalPositionNumber);
-    var finalBlock = orientBlock(movedBlock, finalPositionNumber, orientation);
+    orientations[blockName] = orientation;
+    var movedBlock = moveBlockToFinalPosition(blocks[blockToOrientIndex], blockToOrientIndex);
+    var finalBlock = orientBlock(movedBlock, blockToOrientIndex, orientation);
     blockSolutions.push(finalBlock);
-    // drawBlock(finalBlock);
-    permutateOrientations(finalPositionNumber + 1)
+    permutateOrientations(blocks, callback, orientations, blockToOrientIndex + 1, blockSolutions)
     blockSolutions.pop();
   });
 }
 
 var count = 0;
-function permutateFinalPositions(blocksLeft) {
-  if (_.isEmpty(blocksLeft)) {
-    count += 1
-    if (count < 27) {
-      return false;
-    }
-    // console.log("Count: "+count)
-    permutateOrientations();
-    return false;
+_.forEach(Combinatorics.permutation(blocks).toArray(), function(blocksPermutation) {
+  count += 1
+  if (count < 27) {
+    return;
   }
-
-  var solved = false;
-  var currentBlock = blocksLeft.shift();
-
-  var finalPositionsWithNoWoodBlock = _.keys(_.pickBy(finalPositionToWoodBlockMatching, function(value, key) {
-    return value === null;
-  }));
-
-  for(var i=0; i < finalPositionsWithNoWoodBlock.length; i++) {
-    finalPositionToWoodBlockMatching[finalPositionsWithNoWoodBlock[i]] = currentBlock;
-    var isSolved = permutateFinalPositions(blocksLeft);
-
-    if (isSolved) {
-      solved = true;
-      break;
+  permutateOrientations(blocksPermutation, function(blockSolutions) {
+    var solution = checkSolution(blockSolutions);
+    if (solution) {
+      console.log("Found");
+      exit
     }
-
-    finalPositionToWoodBlockMatching[finalPositionsWithNoWoodBlock[i]] = null;
-  }
-  blocks.unshift(currentBlock)
-
-  return solved;
-}
-
-permutateFinalPositions(blocks);
-
-// for currentCorrectFinalPosition in correctFinalPositions
-//   if currentCorrectFinalPosition.direction == 'x'
-//     iterate through all 8 permutations
-//   else
-//   end
-// end
+  });
+});
