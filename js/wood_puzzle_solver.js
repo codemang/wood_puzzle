@@ -1,5 +1,45 @@
 var blocks = [0,1,2,3,4,5]
+var stop = false;
+function exit( status ) {
+    // http://kevin.vanzonneveld.net
+    // +   original by: Brett Zamir (http://brettz9.blogspot.com)
+    // +      input by: Paul
+    // +   bugfixed by: Hyam Singer (http://www.impact-computing.com/)
+    // +   improved by: Philip Peterson
+    // +   bugfixed by: Brett Zamir (http://brettz9.blogspot.com)
+    // %        note 1: Should be considered expirimental. Please comment on this function.
+    // *     example 1: exit();
+    // *     returns 1: null
 
+    var i;
+
+    if (typeof status === 'string') {
+        alert(status);
+    }
+
+    window.addEventListener('error', function (e) {e.preventDefault();e.stopPropagation();}, false);
+
+    var handlers = [
+        'copy', 'cut', 'paste',
+        'beforeunload', 'blur', 'change', 'click', 'contextmenu', 'dblclick', 'focus', 'keydown', 'keypress', 'keyup', 'mousedown', 'mousemove', 'mouseout', 'mouseover', 'mouseup', 'resize', 'scroll',
+        'DOMNodeInserted', 'DOMNodeRemoved', 'DOMNodeRemovedFromDocument', 'DOMNodeInsertedIntoDocument', 'DOMAttrModified', 'DOMCharacterDataModified', 'DOMElementNameChanged', 'DOMAttributeNameChanged', 'DOMActivate', 'DOMFocusIn', 'DOMFocusOut', 'online', 'offline', 'textInput',
+        'abort', 'close', 'dragdrop', 'load', 'paint', 'reset', 'select', 'submit', 'unload'
+    ];
+
+    function stopPropagation (e) {
+        e.stopPropagation();
+        // e.preventDefault(); // Stop for the form controls, etc., too?
+    }
+    for (i=0; i < handlers.length; i++) {
+        window.addEventListener(handlers[i], function (e) {stopPropagation(e);}, true);
+    }
+
+    if (window.stop) {
+        window.stop();
+    }
+
+    throw '';
+}
 function calculateFinalPositionCenter(finalPosition) {
   if (finalPosition.direction === 'x') {
     return [finalPosition.startPoint[0] + 3.5, finalPosition.startPoint[1] + 0.5, finalPosition.startPoint[2] + 0.5]
@@ -135,21 +175,14 @@ function permutateOrientations(blocks, callback, orientations = {}, blockToOrien
 
 var unwindSnapshots = [];
 
-// All combinations of blocks that could be moved at a time e.g, just block 1,
-// blocks 1 and 3, etc
-var blockCombs = Combinatorics.power(blocks).toArray();
-var sortedBlockCombs = _.sortBy(blockCombs, function(comb) { return comb.length });
-sortedBlockCombs.shift(); // First elm is always empty array.
-sortedBlockCombs = _.reject(sortedBlockCombs, function(comb) { return comb.length === 6 })
-
 var unwindTranslations = {
-  x: new THREE.Matrix4().makeTranslation(1, 0, 0),
-  x: new THREE.Matrix4().makeTranslation(-1, 0, 0),
-  y: new THREE.Matrix4().makeTranslation(0, 1, 0),
-  y: new THREE.Matrix4().makeTranslation(0, -1, 0),
-  z: new THREE.Matrix4().makeTranslation(0, 0, 1),
-  z: new THREE.Matrix4().makeTranslation(0, 0, -1),
-}
+  "x": new THREE.Matrix4().makeTranslation(1, 0, 0),
+  "-x": new THREE.Matrix4().makeTranslation(-1, 0, 0),
+  "y": new THREE.Matrix4().makeTranslation(0, 1, 0),
+  "-y": new THREE.Matrix4().makeTranslation(0, -1, 0),
+  "z": new THREE.Matrix4().makeTranslation(0, 0, 1),
+  "-z": new THREE.Matrix4().makeTranslation(0, 0, -1),
+};
 
 function moveBlocksToOrigin(blocks) {
   var lowestVertex = null, lowestVertexSum = Infinity;
@@ -175,42 +208,108 @@ function moveBlocksToOrigin(blocks) {
   return normalizedBlocks;
 }
 
-var intermediateBlockSignatures = []
+var intermediateBlockSignatures = new Set();
 var intermediateBlockOrientations = []
 
-var count1=1;
-function moveBlocks(blockSolutions, blockIndexes, translation) {
+var specialBlocks = [];
+var special = false;
+function moveBlocks(blockSolutions, blockIndexes, translation, translationName) {
   var clonedBlocks = _.cloneDeep(blockSolutions) ;
-
   _.forEach(blockIndexes, function(blockIndex) {
     clonedBlocks[blockIndex] = applyMatrixToBlock(clonedBlocks[blockIndex], translation);
   });
 
   var isValid = checkSolution(clonedBlocks)
+  var normalizedBlocks = moveBlocksToOrigin(clonedBlocks)
+  var signature = md5(normalizedBlocks)
+  var succeeded = false;
+
+  intermediateBlockOrientations.push({
+    blocks: _.clone(clonedBlocks),
+    signature: _.clone(signature),
+    normalizedBlocks: _.clone(normalizedBlocks),
+    translation: translationName,
+    valid: true
+  });
+
+  if (signature === "43f6a7760e07862cfad379665b6f9acd") {
+    special = true
+  }
+
+  if (special) {
+    specialBlocks.push({
+      blocks: _.clone(clonedBlocks),
+      signature: _.clone(signature),
+      normalizedBlocks: _.clone(normalizedBlocks),
+      translation: translationName,
+      valid: true
+    });
+  }
+
   if (!isValid) {
-    // console.log("Invalid")
-    return;
+    _.last(intermediateBlockOrientations).valid = false;
+    return false;
   }
 
-  const normalizedBlocks = moveBlocksToOrigin(clonedBlocks)
-  signature = md5(normalizedBlocks)
 
-  if (intermediateBlockSignatures.includes(signature)) {
-    console.log("Existing signature: "+signature)
-    return;
-  } else {
-    console.log("adding signature: "+signature)
+  if (intermediateBlockSignatures.has(signature)) {
+    _.last(intermediateBlockOrientations).valid = 'no signature';
+    return false;
   }
 
-  count1 += 1;
-  if (count1 > 100) {
-    exit
-  }
+  _.forEach(_.times(clonedBlocks.length), function(blockIndex) {
+    var minDistance = minDistanceFromBlock(clonedBlocks, blockIndex);
+    if (minDistance > 5) {
+      clonedBlocks.splice(blockIndex, 1)
+      specialBlocks.push({ blocks: _.clone(clonedBlocks) });
+      if (clonedBlocks.length === 1) {
+        // stop = true;
+        succeeded = true;
+        // console.log("Down to 1 block")
+      }
+      return false;
+    }
+  })
 
-  intermediateBlockOrientations.push({blocks: _.clone(clonedBlocks), signature: _.clone(signature), normalizedBlocks: _.clone(normalizedBlocks)});
-  intermediateBlockSignatures.push(signature);
-  unwindSolution(clonedBlocks);
-  // intermediateBlockSignatures.pop();
+  intermediateBlockSignatures.add(signature);
+  if (!succeeded) {
+    var lastMoveSucceeded = unwindSolution(_.clone(clonedBlocks));
+    // I'd like to maake this work.
+    // if (!lastMoveSucceeded) {
+    //   intermediateBlockOrientations.pop();
+    // }
+    return lastMoveSucceeded;
+  }
+  return true;
+}
+
+var didnt_find_it = 0
+function unwindSolution(blockSolutions) {
+  // console.log("Unwinding solution")
+  // All combinations of blocks that could be moved at a time e.g, just block 1,
+  // blocks 1 and 3, etc
+  var blockCombs = Combinatorics.power(_.times(blockSolutions.length)).toArray();
+  var sortedBlockCombs = _.sortBy(blockCombs, function(comb) { return comb.length });
+  sortedBlockCombs.shift(); // First elm is always empty array.
+  sortedBlockCombs.pop(); // Last elm is always full set
+  sortedBlockCombs = _.reject(sortedBlockCombs, function(comb) { return comb.length === 6 })
+
+  var found = false
+  _.forEach(sortedBlockCombs, function(blockIndexes) {
+    _.forEach(unwindTranslations, function(translation, translationName) {
+      found = moveBlocks(blockSolutions, blockIndexes, translation, translationName)
+      // console.log("Why returning: "+found)
+      if (found) { return false; }
+    });
+    if (found) { return false; }
+  })
+  didnt_find_it += 1
+  // console.log(didnt_find_it)
+  if (didnt_find_it > 2000) {
+    console.log("Exiting")
+    exit()
+  }
+  return found;
 }
 
 var index = 0;
@@ -227,7 +326,7 @@ function mindDistanceFromVertexToBlock(vertex, block) {
 }
 
 function minDistanceFromBlock(blockSolution, targetIndex) {
-  var otherIndexes = _.difference(blocks, [targetIndex])
+  var otherIndexes = _.difference(_.times(blockSolution.length), [targetIndex])
   return _.min(_.map(otherIndexes, function(blockIndex) {
     var minDistance1 = mindDistanceFromVertexToBlock(_.first(blockSolution[targetIndex]), blockSolution[blockIndex]);
     var minDistance2 = mindDistanceFromVertexToBlock(_.last(blockSolution[targetIndex]), blockSolution[blockIndex]);
@@ -236,11 +335,8 @@ function minDistanceFromBlock(blockSolution, targetIndex) {
 }
 
 function next() {
+  index += 1;
   clearCubes();
-  console.log(minDistanceFromBlock(intermediateBlockOrientations[index].blocks, 1));
-  // drawBlocks(intermediateBlockOrientations[index].blocks)
-  var greenBlockIndex = [1];
-  var otherBlocks = [0,2,3,4,5];
   const colors = [
     0xff0000,//red
     0x00ff00,//green
@@ -252,44 +348,49 @@ function next() {
   _.forEach(intermediateBlockOrientations[index].blocks, function(block, index) {
     drawBlock(block, colors[index])
   });
+  console.log(`Translation: ${intermediateBlockOrientations[index].translation}, valid: ${intermediateBlockOrientations[index].valid}`)
+}
+function next1() {
   index += 1;
+  clearCubes();
+  const colors = [
+    0xff0000,//red
+    0x00ff00,//green
+    0x0000ff,//blue
+    0xFFA500,//orange
+    0x800080,//purple
+    0xffff00,//yellow
+  ]
+
+  _.forEach(specialBlocks[index].blocks, function(block, index) {
+    drawBlock(block, colors[index])
+  });
+
+  console.log(`Translation: ${specialBlocks[index].translation}, valid: ${specialBlocks[index].valid}`)
 }
 
-function testIntermediateBlocksAreValid() {
-  return _.every(intermediateBlockOrientations, function(metadata) {
-    return checkSolution(metadata.blocks)
-  })
-}
 
-function normalized() {
-  drawBlocks(intermediateBlockOrientations[index].normalizedBlocks, 0x00ff00)
-}
+var blah = []
+function unwindThreeAtATime(blockSolutions) {
+  blah = []
+  var couldUnwind = true;
+  cmb = Combinatorics.combination(blocks, 3).toArray();
+  _.forEach(cmb, function(comb) {
+    intermediateBlockOrientations = [];
+    intermediateBlockSignatures.clear()
+    var newBlocks = [
+      _.clone(blockSolutions[comb[0]]),
+      _.clone(blockSolutions[comb[1]]),
+      _.clone(blockSolutions[comb[2]]),
+    ]
+    if (!unwindSolution(newBlocks)) {
+      couldUnwind = false;
+    }
+    console.log("Did unwind: "+couldUnwind)
+    blah.push(_.clone(intermediateBlockOrientations))
+  });
 
-function analyzeNormalized() {
-  var a = intermediateBlockOrientations[13].normalizedBlocks
-  var b = intermediateBlockOrientations[14].normalizedBlocks
-  _.times(6, function(index) {
-    _.forEach(a, function(vertex, i) {
-      console.log(_.isEqual(a[index][i], b[index][i]));
-    });
-  })
-}
-
-function unwindSolution(blockSolutions, targetCount = 0, currentCount = 0) {
-  _.forEach(sortedBlockCombs, function(blockIndexes) {
-    _.forEach(unwindTranslations, function(translation) {
-      moveBlocks(blockSolutions, blockIndexes, translation)
-    });
-  })
-
-  // drawBlocks(blockSolutions)
-  // _.forEach(sortedBlockCombs, function(blockIndexes) {
-  //   _.forEach(unwindTranslations, function(translation) {
-  //     clearCubes();
-  //     targetCount += 1;
-  //     moveBlocks(blockSolutions, blockIndexes, translation)
-  //   });
-  // })
+  return couldUnwind;
 }
 
 function testThatMoveBlockToOriginWorks() {
@@ -306,22 +407,38 @@ function testThatMoveBlockToOriginWorks2() {
 }
 
 var count = 0;
-var stop = false;
 _.forEach(Combinatorics.permutation(blocks).toArray(), function(blocksPermutation) {
   if (stop) {
     return true;
   }
   count += 1
   // if (count < 27) {
-  if (count < 30) {
+  if (count < 225) {
     return;
   }
   permutateOrientations(blocksPermutation, function(blockSolutions) {
     var solution = checkSolution(blockSolutions, blocksPermutation);
     if (solution && !stop) {
       console.log(count)
-      unwindSolution(blockSolutions, _.cloneDeep(blockSolutions))
-      console.log("Couldn't unwind solution");
+      console.log("Checking three")
+      var couldUnwindThree = unwindThreeAtATime(_.cloneDeep(blockSolutions))
+      console.log("Done checking three")
+      if (couldUnwindThree) {
+        console.log("Could unwind 3")
+        intermediateBlockOrientations = [];
+        intermediateBlockSignatures.clear()
+        console.log("Checking full")
+        var couldUnwindSolution = unwindSolution(blockSolutions, _.cloneDeep(blockSolutions))
+        console.log("Done checking full")
+        console.log("Outcome")
+        console.log(couldUnwindSolution)
+        if (couldUnwindSolution) {
+          console.log("WOOOOOOOOOO")
+          stop = true;
+        }
+      } else {
+        console.log("Coudlnt unwind 3")
+      }
       // stop = true;
     }
   });
