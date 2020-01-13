@@ -1,4 +1,4 @@
-wood1 = [
+vertices1 = [
   [0,0,0],
   [1,0,0],
   [2,0,0],
@@ -29,7 +29,7 @@ wood1 = [
   [7,1,1],
 ]
 
-wood2 = [
+vertices2 = [
   [0,0,0],
   [1,0,0],
   [6,0,0],
@@ -58,7 +58,7 @@ wood2 = [
   [7,1,1],
 ]
 
-wood3 = [
+vertices3 = [
   [0,0,0],
   [1,0,0],
   [2,0,0],
@@ -88,7 +88,7 @@ wood3 = [
   [7,1,1],
 ]
 
-wood4 = [
+vertices4 = [
   [0,0,0],
   [1,0,0],
   [2,0,0],
@@ -116,7 +116,7 @@ wood4 = [
   [7,1,1],
 ]
 
-wood5 = [
+vertices5 = [
   [0,0,0],
   [1,0,0],
   [2,0,0],
@@ -146,7 +146,7 @@ wood5 = [
   [7,1,1],
 ]
 
-wood6 = [
+vertices6 = [
   [0,0,0],
   [1,0,0],
   [2,0,0],
@@ -178,28 +178,100 @@ wood6 = [
   [7,1,1],
 ]
 
-woodBlocks = [
-  wood1,
-  wood2,
-  wood3,
-  wood4,
-  wood5,
-  wood6,
-]
-
-function drawBlock(block, color = 0xff0000) {
-  block.forEach(function(vertex, index) {
-    var newColor = color;
-    // if (index === 5) {
-      // newColor = 0xff0000;
-    // }
-    drawBox(vertex, newColor);
-  });
+function generateWoodBlock(vertices, index) {
+  return {
+    origVertices: vertices,
+    index: index,
+  };
 }
 
+var blocks = _.map([
+  vertices1,
+  vertices2,
+  vertices3,
+  vertices4,
+  vertices5,
+  vertices6,
+], generateWoodBlock);
 
-function drawBlocks(blocks, color) {
-  _.forEach(blocks, function(block) {
-    drawBlock(block, color)
+function moveBlock(block, finalPosition) {
+  var blockMinVertex = findMinVertex(block);
+  var finalPositionMinVertex = findMinVertex(finalPosition.vertices);
+  var offset = _.map([0,1,2], function(index) {
+    return finalPositionMinVertex[index] - blockMinVertex[index];
   });
+  var translationM = new THREE.Matrix4().makeTranslation(...offset);
+  return applyMatrixToBlock(block, translationM);
 }
+
+function applyMatrixToBlock(block, matrix) {
+  var blockAfterMutation = []
+  block.forEach(function(vertex) {
+    blockAfterMutation.push(new THREE.Vector3(...vertex).applyMatrix4(matrix).toArray());
+  });
+  return blockAfterMutation;
+}
+
+function moveBlockToFinalPosition(blockIndex, finalPositionIndex) {
+  var rotation = new THREE.Matrix4();
+
+  if (finalPositions[finalPositionIndex].direction === 'y') {
+    var rotation = new THREE.Matrix4().makeRotationZ(Math.PI / 2);
+  } else if (finalPositions[finalPositionIndex].direction === 'z') {
+    var rotation = new THREE.Matrix4().makeRotationY(Math.PI / 2);
+  }
+
+  var rotatedBlock = applyMatrixToBlock(blocks[blockIndex].origVertices, rotation);
+  var movedBlock = moveBlock(rotatedBlock, finalPositions[finalPositionIndex]);
+  return movedBlock;
+}
+
+function orientBlock(block, finalPositionIndex, orientation) {
+  var finalPosition = finalPositions[finalPositionIndex];
+  var finalPositionCenter = calculateFinalPositionCenter(finalPosition);
+
+  var negativeCenter = _.map(finalPositionCenter, function(coord) {
+    return -coord;
+  })
+
+  var translationToCenter = new THREE.Matrix4().makeTranslation(...negativeCenter);
+  var translationFromCenter = new THREE.Matrix4().makeTranslation(...finalPositionCenter);
+
+  if (finalPosition.direction === 'x') {
+    var rotation1 = new THREE.Matrix4().makeRotationX((Math.PI / 2) * orientation);
+    var rotation2 = new THREE.Matrix4()
+    if (orientation > 3) {
+      rotation2 = rotation2.makeRotationZ(Math.PI);
+    }
+  } else if (finalPosition.direction === 'y') {
+    var rotation1 = new THREE.Matrix4().makeRotationY((Math.PI / 2) * orientation);
+    var rotation2 = new THREE.Matrix4()
+    if (orientation > 3) {
+      rotation2 = rotation2.makeRotationX(Math.PI);
+    }
+  } else {
+    var rotation1 = new THREE.Matrix4().makeRotationZ((Math.PI / 2) * orientation);
+    var rotation2 = new THREE.Matrix4()
+    if (orientation > 3) {
+      rotation2 = rotation2.makeRotationY(Math.PI);
+    }
+  }
+
+  var finalBlocks = [];
+  block.forEach(function(vertex) {
+    var result = new THREE.Vector3(...vertex)
+      .applyMatrix4(translationToCenter)
+      .applyMatrix4(rotation1)
+      .applyMatrix4(rotation2)
+      .applyMatrix4(translationFromCenter)
+      .toArray()
+
+    finalBlocks.push(result)
+  });
+
+  return finalBlocks;
+}
+
+function findMinVertex(block) {
+  return _.minBy(block, _.sum);
+};

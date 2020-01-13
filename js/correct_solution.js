@@ -59,19 +59,12 @@ function generateVertices(final) {
   return all_vertices
 }
 
-var colors = [
-  new THREE.Color( 0xff0000 ),
-]
-
-var colorIndex = 0;
-
-// _.flatten([
-//   // generateVertices(final1),
-//   // generateVertices(final2),
-//   // generateVertices(final3),
-//   // generateVertices(final4),
-//   // generateVertices(final5),
-//   // generateVertices(final6),
-// ]).forEach(function(coord) {
-//   drawBox(coord, 0xffa500);
-// })
+function calculateFinalPositionCenter(finalPosition) {
+  if (finalPosition.direction === 'x') {
+    return [finalPosition.startPoint[0] + 3.5, finalPosition.startPoint[1] + 0.5, finalPosition.startPoint[2] + 0.5]
+  } else if (finalPosition.direction === 'y') {
+    return [finalPosition.startPoint[0] + 0.5, finalPosition.startPoint[1] + 3.5, finalPosition.startPoint[2] + 0.5]
+  } else {
+    return [finalPosition.startPoint[0] + 0.5, finalPosition.startPoint[1] + 0.5, finalPosition.startPoint[2] + 3.5]
+  }
+}

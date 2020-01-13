@@ -1,179 +1,19 @@
-var blocks = [0,1,2,3,4,5]
 var stop = false;
-function exit( status ) {
-    // http://kevin.vanzonneveld.net
-    // +   original by: Brett Zamir (http://brettz9.blogspot.com)
-    // +      input by: Paul
-    // +   bugfixed by: Hyam Singer (http://www.impact-computing.com/)
-    // +   improved by: Philip Peterson
-    // +   bugfixed by: Brett Zamir (http://brettz9.blogspot.com)
-    // %        note 1: Should be considered expirimental. Please comment on this function.
-    // *     example 1: exit();
-    // *     returns 1: null
 
-    var i;
-
-    if (typeof status === 'string') {
-        alert(status);
-    }
-
-    window.addEventListener('error', function (e) {e.preventDefault();e.stopPropagation();}, false);
-
-    var handlers = [
-        'copy', 'cut', 'paste',
-        'beforeunload', 'blur', 'change', 'click', 'contextmenu', 'dblclick', 'focus', 'keydown', 'keypress', 'keyup', 'mousedown', 'mousemove', 'mouseout', 'mouseover', 'mouseup', 'resize', 'scroll',
-        'DOMNodeInserted', 'DOMNodeRemoved', 'DOMNodeRemovedFromDocument', 'DOMNodeInsertedIntoDocument', 'DOMAttrModified', 'DOMCharacterDataModified', 'DOMElementNameChanged', 'DOMAttributeNameChanged', 'DOMActivate', 'DOMFocusIn', 'DOMFocusOut', 'online', 'offline', 'textInput',
-        'abort', 'close', 'dragdrop', 'load', 'paint', 'reset', 'select', 'submit', 'unload'
-    ];
-
-    function stopPropagation (e) {
-        e.stopPropagation();
-        // e.preventDefault(); // Stop for the form controls, etc., too?
-    }
-    for (i=0; i < handlers.length; i++) {
-        window.addEventListener(handlers[i], function (e) {stopPropagation(e);}, true);
-    }
-
-    if (window.stop) {
-        window.stop();
-    }
-
-    throw '';
-}
-function calculateFinalPositionCenter(finalPosition) {
-  if (finalPosition.direction === 'x') {
-    return [finalPosition.startPoint[0] + 3.5, finalPosition.startPoint[1] + 0.5, finalPosition.startPoint[2] + 0.5]
-  } else if (finalPosition.direction === 'y') {
-    return [finalPosition.startPoint[0] + 0.5, finalPosition.startPoint[1] + 3.5, finalPosition.startPoint[2] + 0.5]
-  } else {
-    return [finalPosition.startPoint[0] + 0.5, finalPosition.startPoint[1] + 0.5, finalPosition.startPoint[2] + 3.5]
-  }
-}
-
-function moveBlock(block, finalPosition) {
-  var blockMinVertex = findMinVertex(block);
-  var finalPositionMinVertex = findMinVertex(finalPosition.vertices);
-  var offset = _.map([0,1,2], function(index) {
-    return finalPositionMinVertex[index] - blockMinVertex[index];
-  });
-  var translationM = new THREE.Matrix4().makeTranslation(...offset);
-  return applyMatrixToBlock(block, translationM);
-}
-
-function findMinVertex(block) {
-  return _.minBy(block, _.sum);
-};
-
-function applyMatrixToBlock(block, matrix) {
-  var blockAfterMutation = []
-  block.forEach(function(vertex) {
-    blockAfterMutation.push(new THREE.Vector3(...vertex).applyMatrix4(matrix).toArray());
-  });
-  return blockAfterMutation;
-}
-
-function moveBlockToFinalPosition(woodBlockIndex, finalPositionIndex) {
-  var rotation = new THREE.Matrix4();
-
-  if (finalPositions[finalPositionIndex].direction === 'y') {
-    var rotation = new THREE.Matrix4().makeRotationZ(Math.PI / 2);
-  } else if (finalPositions[finalPositionIndex].direction === 'z') {
-    var rotation = new THREE.Matrix4().makeRotationY(Math.PI / 2);
-  }
-
-  var rotatedBlock = applyMatrixToBlock(woodBlocks[woodBlockIndex], rotation);
-  var movedBlock = moveBlock(rotatedBlock, finalPositions[finalPositionIndex]);
-  return movedBlock;
-}
-
-function orientBlock(block, finalPositionIndex, orientation) {
-  var finalPosition = finalPositions[finalPositionIndex];
-  var finalPositionCenter = calculateFinalPositionCenter(finalPosition);
-
-  var negativeCenter = _.map(finalPositionCenter, function(coord) {
-    return -coord;
-  })
-
-  var translationToCenter = new THREE.Matrix4().makeTranslation(...negativeCenter);
-  var translationFromCenter = new THREE.Matrix4().makeTranslation(...finalPositionCenter);
-
-  if (finalPosition.direction === 'x') {
-    var rotation1 = new THREE.Matrix4().makeRotationX((Math.PI / 2) * orientation);
-    var rotation2 = new THREE.Matrix4()
-    if (orientation > 3) {
-      rotation2 = rotation2.makeRotationZ(Math.PI);
-    }
-  } else if (finalPosition.direction === 'y') {
-    var rotation1 = new THREE.Matrix4().makeRotationY((Math.PI / 2) * orientation);
-    var rotation2 = new THREE.Matrix4()
-    if (orientation > 3) {
-      rotation2 = rotation2.makeRotationX(Math.PI);
-    }
-  } else {
-    var rotation1 = new THREE.Matrix4().makeRotationZ((Math.PI / 2) * orientation);
-    var rotation2 = new THREE.Matrix4()
-    if (orientation > 3) {
-      rotation2 = rotation2.makeRotationY(Math.PI);
-    }
-  }
-
-  var finalBlocks = [];
-  block.forEach(function(vertex) {
-    var result = new THREE.Vector3(...vertex)
-      .applyMatrix4(translationToCenter)
-      .applyMatrix4(rotation1)
-      .applyMatrix4(rotation2)
-      .applyMatrix4(translationFromCenter)
-      .toArray()
-
-    finalBlocks.push(result)
-  });
-
-  return finalBlocks;
-}
 
 function checkSolution(blockSolutionsTemp) {
-  var uniquenessHash = {}
-  var noOverlap = true;
-
-  _.forEach(blockSolutionsTemp, function(blockSolution) {
-    _.forEach(blockSolution, function(vertex) {
-      var name = _.join(_.map(vertex, Math.round), '-');
-      if (uniquenessHash[name]) {
-        noOverlap = false;
-        return false;
-      } else {
-        uniquenessHash[name] = true;
-      }
-    })
-
-    if (!noOverlap) {
-      return false;
-    }
-  })
-
-  return noOverlap;
-}
-
-function permutateOrientations(blocks, callback, orientations = {}, blockToOrientIndex = 0, blockSolutions = []) {
-  if (blockToOrientIndex === blocks.length) {
-    callback(blockSolutions)
-    return;
-  }
-
-  var blockName = blocks[blockToOrientIndex];
-
-  [0,1,2,3,4,5,6,7].forEach(function(orientation) {
-    orientations[blockName] = orientation;
-    var movedBlock = moveBlockToFinalPosition(blocks[blockToOrientIndex], blockToOrientIndex);
-    var finalBlock = orientBlock(movedBlock, blockToOrientIndex, orientation);
-    blockSolutions.push(finalBlock);
-    permutateOrientations(blocks, callback, orientations, blockToOrientIndex + 1, blockSolutions)
-    blockSolutions.pop();
+  var vertexNames = _.map(_.flatten(blockSolutionsTemp), function(vertex) {
+    return _.join(_.map(vertex, Math.round), '-');
   });
+
+  return vertexNames.length === _.uniq(vertexNames).length;
 }
 
-var unwindSnapshots = [];
+function allBlockToOrientationMappings(callback) {
+  // There are 6 blocks, and each block can be in one of 8 orientations for a given position.
+  return Combinatorics.baseN(_.times(8), 6).toArray();
+
+}
 
 var unwindTranslations = {
   "x": new THREE.Matrix4().makeTranslation(1, 0, 0),
@@ -285,7 +125,6 @@ function moveBlocks(blockSolutions, blockIndexes, translation, translationName) 
 
 var didnt_find_it = 0
 function unwindSolution(blockSolutions) {
-  // console.log("Unwinding solution")
   // All combinations of blocks that could be moved at a time e.g, just block 1,
   // blocks 1 and 3, etc
   var blockCombs = Combinatorics.power(_.times(blockSolutions.length)).toArray();
@@ -312,12 +151,6 @@ function unwindSolution(blockSolutions) {
   return found;
 }
 
-var index = 0;
-function prev() {
-  clearCubes();
-  drawBlocks(intermediateBlockOrientations[index].blocks)
-  index -= 1;
-}
 
 function mindDistanceFromVertexToBlock(vertex, block) {
   return _.min(_.map(block, function(blockVertex) {
@@ -333,42 +166,6 @@ function minDistanceFromBlock(blockSolution, targetIndex) {
     return _.min([minDistance2, minDistance2]);
   }));
 }
-
-function next() {
-  index += 1;
-  clearCubes();
-  const colors = [
-    0xff0000,//red
-    0x00ff00,//green
-    0x0000ff,//blue
-    0xFFA500,//orange
-    0x800080,//purple
-    0xffff00,//yellow
-  ]
-  _.forEach(intermediateBlockOrientations[index].blocks, function(block, index) {
-    drawBlock(block, colors[index])
-  });
-  console.log(`Translation: ${intermediateBlockOrientations[index].translation}, valid: ${intermediateBlockOrientations[index].valid}`)
-}
-function next1() {
-  index += 1;
-  clearCubes();
-  const colors = [
-    0xff0000,//red
-    0x00ff00,//green
-    0x0000ff,//blue
-    0xFFA500,//orange
-    0x800080,//purple
-    0xffff00,//yellow
-  ]
-
-  _.forEach(specialBlocks[index].blocks, function(block, index) {
-    drawBlock(block, colors[index])
-  });
-
-  console.log(`Translation: ${specialBlocks[index].translation}, valid: ${specialBlocks[index].valid}`)
-}
-
 
 var blah = []
 function unwindThreeAtATime(blockSolutions) {
@@ -393,53 +190,63 @@ function unwindThreeAtATime(blockSolutions) {
   return couldUnwind;
 }
 
-function testThatMoveBlockToOriginWorks() {
-  var test = [[[3,3,3], [3,3,4]]]
-  drawBlock(test[0]);
-  console.log(moveBlocksToOrigin(test))
-  drawBlock(moveBlocksToOrigin(test)[0]);
+function allBlockToFinalPositionMappings() {
+  // There are 6 blocks to move. Each block can be in one of 6 final positions.
+  // The result of this function is an array of all possible matchings. A
+  // matching is an array of 6 integers. The position of each integer indicates
+  // the final position, and the integer indicates which block. E.g, if one of the
+  // matchings is [3,1,4,5,2,0], that means the fourth block (3 + 1 due to
+  // zero indexing) should be placed in the first final position, and the first
+  // block should be in the last final position.
+  var numBlocks = _.times(blocks.length)
+  var knownOffset = 224
+  return Combinatorics.permutation(numBlocks).toArray().slice(knownOffset);
 }
 
-function testThatMoveBlockToOriginWorks2() {
-  var blah = [ [ [ 0, -10, 0 ], [ 1, -10, 0 ], [ 2, -10, 0 ], [ 3, -10, 0 ], [ 4, -10, 0 ], [ 5, -10, 0 ], [ 6, -10, 0 ], [ 7, -10, 0 ], [ 0, -9, 0 ], [ 1, -9, 0 ], [ 2, -9, 0 ], [ 4, -9, 0 ], [ 5, -9, 0 ], [ 6, -9, 0 ], [ 7, -9, 0 ], [ 0, -10, 1 ], [ 1, -10, 1 ], [ 3, -10, 1 ], [ 6, -10, 1 ], [ 7, -10, 1 ], [ 0, -9, 1 ], [ 1, -9, 1 ], [ 4, -9, 1 ], [ 6, -9, 1 ], [ 7, -9, 1 ] ], [ [ 7, -10, 3 ], [ 6, -10, 3 ], [ 5, -10, 3 ], [ 4, -10, 3 ], [ 3, -10, 3 ], [ 2, -10, 3 ], [ 1, -10, 3 ], [ 0, -10, 3 ], [ 7, -9, 3 ], [ 6, -9, 3 ], [ 5, -9, 3 ], [ 2, -9, 3 ], [ 1, -9, 3 ], [ 0, -9, 3 ], [ 7, -10, 1.9999999999999998 ], [ 6, -10, 1.9999999999999998 ], [ 4, -10, 1.9999999999999998 ], [ 2, -10, 1.9999999999999998 ], [ 1, -10, 1.9999999999999998 ], [ 0, -10, 1.9999999999999998 ], [ 7, -9, 2 ], [ 6, -9, 2 ], [ 1, -9, 2 ], [ 0, -9, 2 ] ], [ [ 3, -13, 1 ], [ 3, -12, 1 ], [ 3.0000000000000004, -7, 1 ], [ 3.0000000000000004, -6, 1 ], [ 2, -13, 1 ], [ 2, -12, 1 ], [ 2, -11, 1 ], [ 2, -10, 1 ], [ 2, -9, 1 ], [ 2.0000000000000004, -8, 1 ], [ 2.0000000000000004, -7, 1 ], [ 2.0000000000000004, -6, 1 ], [ 3, -13, 2 ], [ 3, -12, 2 ], [ 3.0000000000000004, -7, 2 ], [ 3.0000000000000004, -6, 2 ], [ 2, -13, 2 ], [ 2, -12, 2 ], [ 2, -11, 2 ], [ 2, -9, 2 ], [ 2.0000000000000004, -8, 2 ], [ 2.0000000000000004, -7, 2 ], [ 2.0000000000000004, -6, 2 ] ], [ [ 4, -6, 0.9999999999999998 ], [ 4, -7, 0.9999999999999999 ], [ 4, -8, 1 ], [ 4, -11, 1.0000000000000004 ], [ 4, -12, 1.0000000000000004 ], [ 4, -13, 1.0000000000000007 ], [ 5, -6, 0.9999999999999993 ], [ 5, -7, 0.9999999999999994 ], [ 5, -8, 0.9999999999999996 ], [ 5, -11, 1 ], [ 5, -12, 1 ], [ 5, -13, 1.0000000000000002 ], [ 4, -6, 1.9999999999999998 ], [ 4, -7, 2 ], [ 4, -12, 2.0000000000000004 ], [ 4, -13, 2.000000000000001 ], [ 5, -6, 1.9999999999999993 ], [ 5, -7, 1.9999999999999996 ], [ 5, -8, 1.9999999999999996 ], [ 5, -9, 1.9999999999999998 ], [ 5, -10, 2 ], [ 5, -11, 2 ], [ 5, -12, 2 ], [ 5, -13, 2 ] ], [ [ 3.0000000000000004, -11, -2 ], [ 3.0000000000000004, -11, -1 ], [ 3.0000000000000004, -11, 0 ], [ 3, -11, 0.9999999999999999 ], [ 3, -11, 2 ], [ 3, -11, 3 ], [ 3, -11, 4 ], [ 3, -11, 5 ], [ 4.000000000000001, -11, -2 ], [ 4, -11, -1 ], [ 4, -11, 0 ], [ 4, -11, 3 ], [ 4, -11, 4 ], [ 3.9999999999999996, -11, 5 ], [ 3.0000000000000004, -10, -2 ], [ 3, -10, -1 ], [ 2.9999999999999996, -10, 4 ], [ 2.9999999999999996, -10, 5 ], [ 4, -10, -2 ], [ 4, -10, -1 ], [ 3.9999999999999996, -10, 4 ], [ 3.9999999999999996, -10, 5 ] ], [ [ 4, -9, 5 ], [ 4, -9, 4 ], [ 4, -9, 3 ], [ 4, -9, -1 ], [ 4, -9, -2 ], [ 3, -9, 5 ], [ 3, -9, 4 ], [ 3, -9, 3 ], [ 3, -9, 2 ], [ 3, -9, 1 ], [ 3, -9, 0 ], [ 3, -9, -1 ], [ 3, -9, -2 ], [ 4, -8, 5 ], [ 4, -8, 4 ], [ 4, -8, 3 ], [ 4, -8, 2 ], [ 4, -8, 0 ], [ 4, -8, -1 ], [ 4, -8, -2 ], [ 3, -8, 5 ], [ 3, -8, 4 ], [ 3, -8, 3 ], [ 3, -8, 0 ], [ 3, -8, -1 ], [ 3, -8, -2 ] ] ];
-  drawBlocks(blah)
-  drawBlocks(moveBlocksToOrigin(blah), 0x00fff00)
+function moveBlocksToFinalPositionsWithOrientations(blockToFinalPositionMapping, blockToOrientationMapping) {
+  var blocks = []
+
+  _.forEach(blockToFinalPositionMapping, function(blockIndex, finalPositionIndex) {
+    var movedBlock = moveBlockToFinalPosition(blockIndex, finalPositionIndex);
+    var finalBlock = orientBlock(movedBlock, finalPositionIndex, blockToOrientationMapping[blockIndex]);
+    blocks.push(finalBlock);
+  });
+
+  return blocks;
 }
 
-var count = 0;
-_.forEach(Combinatorics.permutation(blocks).toArray(), function(blocksPermutation) {
-  if (stop) {
-    return true;
-  }
-  count += 1
-  // if (count < 27) {
-  if (count < 225) {
-    return;
-  }
-  permutateOrientations(blocksPermutation, function(blockSolutions) {
-    var solution = checkSolution(blockSolutions, blocksPermutation);
-    if (solution && !stop) {
-      console.log(count)
-      console.log("Checking three")
+// _.forEach(allBlockToFinalPositionMappings(), function(blockToFinalPositionMapping) {
+//   if (stop) { return true; }
+//   _.forEach(allBlockToOrientationMappings(), function(blockToOrientationMapping) {
+//     if (stop) { return true; }
+//     checkSolutionAndUnwind(blockToFinalPositionMapping, blockToOrientationMapping)
+//   });
+// });
+
+blockToFinalPositionMapping =[1, 5, 2, 3, 4, 0];
+blockToOrientationMapping = [7, 7, 1, 7, 2, 1];
+
+function checkSolutionAndUnwind(blockToFinalPositionMapping, blockToOrientationMapping) {
+    var blocksInFinalPosition = moveBlocksToFinalPositionsWithOrientations(
+      blockToFinalPositionMapping,
+      blockToOrientationMapping
+    )
+
+    var solution = checkSolution(blocksInFinalPosition)
+
+    if (solution) {
+      drawBlocks(blocksInFinalPosition)
       var couldUnwindThree = unwindThreeAtATime(_.cloneDeep(blockSolutions))
-      console.log("Done checking three")
       if (couldUnwindThree) {
-        console.log("Could unwind 3")
         intermediateBlockOrientations = [];
         intermediateBlockSignatures.clear()
-        console.log("Checking full")
-        var couldUnwindSolution = unwindSolution(blockSolutions, _.cloneDeep(blockSolutions))
-        console.log("Done checking full")
-        console.log("Outcome")
-        console.log(couldUnwindSolution)
-        if (couldUnwindSolution) {
-          console.log("WOOOOOOOOOO")
-          stop = true;
+        stop = unwindSolution(blockSolutions, _.cloneDeep(blockSolutions))
+        if (stop) {
+          console.log("Stopping")
         }
-      } else {
-        console.log("Coudlnt unwind 3")
       }
-      // stop = true;
     }
-  });
-});
+}
+
+checkSolutionAndUnwind(blockToFinalPositionMapping, blockToOrientationMapping)
+console.log("Done")
