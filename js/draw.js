@@ -42,19 +42,47 @@ function drawBlocks(blocks, color) {
   });
 }
 
+var index = 0;
 function next() {
-  index += 1;
-  clearCubes();
-  const colors = [
+  var colors = [
     0xff0000,//red
     0x00ff00,//green
     0x0000ff,//blue
     0xFFA500,//orange
     0x800080,//purple
     0xffff00,//yellow
-  ]
+  ];
+  index += 1;
+  clearCubes();
   _.forEach(intermediateBlockOrientations[index].blocks, function(block, index) {
-    drawBlock(block, colors[index])
+    drawBlock(block.origVertices, colors[block.index])
   });
   console.log(`Translation: ${intermediateBlockOrientations[index].translation}, valid: ${intermediateBlockOrientations[index].valid}`)
+}
+
+function prev() {
+  var colors = [
+    0xff0000,//red
+    0x00ff00,//green
+    0x0000ff,//blue
+    0xFFA500,//orange
+    0x800080,//purple
+    0xffff00,//yellow
+  ];
+  clearCubes();
+  _.forEach(intermediateBlockOrientations[index].blocks, function(block, index) {
+    drawBlock(block.origVertices, colors[block.index])
+  });
+  index -= 1;
+}
+
+function drawFinal() {
+  index = 75
+  var intervalId = setInterval(function() {
+    if (index >= 0) {
+      prev();
+    } else {
+      clearInterval(intervalId)
+    }
+  }, 100)
 }
