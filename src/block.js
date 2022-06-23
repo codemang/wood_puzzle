@@ -1,6 +1,6 @@
 import _ from 'lodash';
 import * as THREE from 'three';
-import { minVertex } from './vertex_helpers.js';
+import { minVertex } from './vertex_helpers';
 
 class Block {
   constructor(vertices, id) {
@@ -27,17 +27,17 @@ class Block {
 
   rotateX(radians) {
     const rotation = new THREE.Matrix4().makeRotationX(radians);
-    this.applyMatrixWithPossibleChaining(rotation)
+    this.applyMatrixWithPossibleChaining(rotation);
   }
 
   rotateY(radians) {
     const rotation = new THREE.Matrix4().makeRotationY(radians);
-    this.applyMatrixWithPossibleChaining(rotation)
+    this.applyMatrixWithPossibleChaining(rotation);
   }
 
   rotateZ(radians) {
     const rotation = new THREE.Matrix4().makeRotationZ(radians);
-    this.applyMatrixWithPossibleChaining(rotation)
+    this.applyMatrixWithPossibleChaining(rotation);
   }
 
   minVertex() {
@@ -45,16 +45,16 @@ class Block {
   }
 
   translate(translationOffsets) {
-    var translationM = new THREE.Matrix4().makeTranslation(...translationOffsets);
+    const translationM = new THREE.Matrix4().makeTranslation(...translationOffsets);
     this.applyMatrixWithPossibleChaining(translationM);
   }
 
   applyMatricesToBlock(matrices) {
-    const newVertices = []
+    const newVertices = [];
 
-    this.vertices.forEach(vertex => {
-      let newVertex = new THREE.Vector3(...vertex)
-      matrices.forEach(matrix => newVertex = newVertex.applyMatrix4(matrix));
+    this.vertices.forEach((vertex) => {
+      let newVertex = new THREE.Vector3(...vertex);
+      matrices.forEach((matrix) => { newVertex = newVertex.applyMatrix4(matrix); });
       const roundedNewVertex = _.map(newVertex.toArray(), Math.round);
       newVertices.push(roundedNewVertex);
     });

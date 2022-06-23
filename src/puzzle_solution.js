@@ -2,7 +2,7 @@ import _ from 'lodash';
 
 class PuzzleSolution {
   constructor(puzzleStates = []) {
-    this.puzzleStates = _.map(puzzleStates, puzzleState => puzzleState.clone());
+    this.puzzleStates = _.map(puzzleStates, (puzzleState) => puzzleState.clone());
   }
 
   currentPuzzleState() {
@@ -19,20 +19,20 @@ class PuzzleSolution {
 
   popLastPuzzleState() {
     this.puzzleStates.pop();
-  };
+  }
 
   duplicateCurrentPuzzleState() {
     this.addPuzzleState(this.currentPuzzleState());
   }
 
   append(otherPuzzleSolution) {
-    _.forEach(otherPuzzleSolution.puzzleStates, puzzleState => {
+    _.forEach(otherPuzzleSolution.puzzleStates, (puzzleState) => {
       this.addPuzzleState(puzzleState);
     });
   }
 
   appendPuzzleSolution(newPuzzleSolution) {
-    _.each(newPuzzleSolution.puzzleStates, puzzleState => {
+    _.each(newPuzzleSolution.puzzleStates, (puzzleState) => {
       this.addPuzzleState(puzzleState);
     });
   }
@@ -41,6 +41,6 @@ class PuzzleSolution {
     const signatures = _.map(this.puzzleStates, 'signature');
     return signatures.length === _.uniq(signatures).length;
   }
-};
+}
 
 export default PuzzleSolution;

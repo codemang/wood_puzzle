@@ -1,7 +1,7 @@
 import _ from 'lodash';
 import { Permutation, BaseN, PowerSet } from 'js-combinatorics';
-import PuzzleSolutionInitializer from './puzzle_state_initializer.js';
-import PuzzleSolution from './puzzle_solution.js';
+import PuzzleSolutionInitializer from './puzzle_state_initializer';
+import PuzzleSolution from './puzzle_solution';
 
 const POSSIBLE_MOVE_DESCRIPTIONS = [
   { direction: 'x', amount: 1 },
@@ -10,7 +10,7 @@ const POSSIBLE_MOVE_DESCRIPTIONS = [
   { direction: 'y', amount: -1 },
   { direction: 'z', amount: 1 },
   { direction: 'z', amount: -1 },
-]
+];
 
 const NUM_MOVEMENT_UNITS_TO_REMOVE_BLOCK = 10;
 
@@ -26,10 +26,10 @@ class PuzzleSolver {
   }
 
   static allBlocksAssignedToFinalPositionsPermutations() {
-    const numBlocks = _.times(6)
-    const answer = new Permutation(numBlocks)
+    const numBlocks = _.times(6);
+    const answer = new Permutation(numBlocks);
     return answer.toArray();
-  };
+  }
 
   static allBlockToOrientationMappings() {
     // There are 6 blocks, and each block can be in one of 8 orientations for a
@@ -40,28 +40,30 @@ class PuzzleSolver {
   }
 
   static forEachIfCondition(collection, condition, callback) {
-    _.forEach(collection, item => {
+    _.forEach(collection, (item) => {
       if (!condition()) {
         return false; // Exit out of the current forEach loop.
       }
 
       callback(item);
+      return true; // Continue in the loop.
     });
   }
 
   static attemptToRemoveBlockFromPuzzle(puzzleSolution) {
     let didRemoveBlock = false;
     const currentPuzzleState = puzzleSolution.currentPuzzleState();
+    const numBlocks = currentPuzzleState.blocks.length;
 
-    PuzzleSolver.forEachIfCondition(_.times(currentPuzzleState.blocks.length), () => !didRemoveBlock, blockIndex => {
-      PuzzleSolver.forEachIfCondition(POSSIBLE_MOVE_DESCRIPTIONS, () => !didRemoveBlock, moveDescription => {
+    PuzzleSolver.forEachIfCondition(_.times(numBlocks), () => !didRemoveBlock, (blockIndex) => {
+      PuzzleSolver.forEachIfCondition(POSSIBLE_MOVE_DESCRIPTIONS, () => !didRemoveBlock, (moveDescription) => { // eslint-disable-line  max-len
         const newPuzzleSolution = new PuzzleSolution([currentPuzzleState]);
 
         const canRemoveBlock = _.every(_.times(NUM_MOVEMENT_UNITS_TO_REMOVE_BLOCK), () => {
           newPuzzleSolution.duplicateCurrentPuzzleState();
-          const blockToMove = newPuzzleSolution.currentPuzzleState().blocks[blockIndex]
+          const blockToMove = newPuzzleSolution.currentPuzzleState().blocks[blockIndex];
           PuzzleSolver.moveBlockFromDescription(blockToMove, moveDescription);
-          return newPuzzleSolution.currentPuzzleState().hasNoOverlap()
+          return newPuzzleSolution.currentPuzzleState().hasNoOverlap();
         });
 
         if (canRemoveBlock) {
@@ -78,14 +80,14 @@ class PuzzleSolver {
   static moveBlocks(puzzleSolution, blockIndexes, moveDescription) {
     puzzleSolution.duplicateCurrentPuzzleState();
 
-    _.forEach(blockIndexes, blockIndex => {
-      const blockToMove = puzzleSolution.currentPuzzleState().blocks[blockIndex]
+    _.forEach(blockIndexes, (blockIndex) => {
+      const blockToMove = puzzleSolution.currentPuzzleState().blocks[blockIndex];
       PuzzleSolver.moveBlockFromDescription(blockToMove, moveDescription);
     });
 
     // TODO: How do we avoid having to call this explicitly?
     puzzleSolution.currentPuzzleState().computeAndSaveSignature();
-  };
+  }
 
   static unwindPuzzle(puzzleSolution) {
     if (puzzleSolution.isFinished()) {
@@ -99,47 +101,58 @@ class PuzzleSolver {
 
       if (puzzleSolution.isFinished()) {
         return;
-      } else {
-        _.forEach(_.times(NUM_MOVEMENT_UNITS_TO_REMOVE_BLOCK), () => puzzleSolution.popLastPuzzleState());
       }
+
+      _.forEach(
+        _.times(NUM_MOVEMENT_UNITS_TO_REMOVE_BLOCK),
+        () => puzzleSolution.popLastPuzzleState(),
+      );
     }
 
     // All combinations of blocks that could be moved at a time e.g, just block 1,
     // blocks 1 and 3, etc
     const numBlocksRemaining = puzzleSolution.currentPuzzleState().blocks.length;
     const blockCombs = new PowerSet(_.times(numBlocksRemaining)).toArray();
-    let sortedBlockCombs = _.sortBy(blockCombs, comb => comb.length);
-    sortedBlockCombs = _.reject(sortedBlockCombs, comb => comb.length === numBlocksRemaining || comb.length === 0)
+    let sortedBlockCombs = _.sortBy(blockCombs, (comb) => comb.length);
 
-    _.forEach(sortedBlockCombs, function(blockIndexes) {
-      _.forEach(POSSIBLE_MOVE_DESCRIPTIONS, moveDescription => {
+    sortedBlockCombs = _.reject(sortedBlockCombs, (comb) => (
+      comb.length === numBlocksRemaining || comb.length === 0
+    ));
+
+    _.forEach(sortedBlockCombs, (blockIndexes) => {
+      _.forEach(POSSIBLE_MOVE_DESCRIPTIONS, (moveDescription) => {
         if (puzzleSolution.isFinished()) {
           return false; // Exit out of the current forEach loop.
         }
 
         PuzzleSolver.moveBlocks(puzzleSolution, blockIndexes, moveDescription);
 
-        if (puzzleSolution.currentPuzzleState().hasNoOverlap() && puzzleSolution.hasNoDuplicates()) {
+        const hasNoOverlap = puzzleSolution.currentPuzzleState().hasNoOverlap();
+        const hasNoDuplicates = puzzleSolution.hasNoDuplicates();
+
+        if (hasNoOverlap && hasNoDuplicates) {
           PuzzleSolver.unwindPuzzle(puzzleSolution);
 
           if (puzzleSolution.isFinished()) {
             return false; // Exit out of the current forEach loop.
-          } else {
-            puzzleSolution.popLastPuzzleState();
           }
+
+          puzzleSolution.popLastPuzzleState();
         } else {
           puzzleSolution.popLastPuzzleState();
         }
+
+        return true; // Continue in the loop.
       });
     });
-  };
+  }
 
   static solve() {
-    _.forEach(PuzzleSolver.allBlocksAssignedToFinalPositionsPermutations(), blocksAssignedToFinalPositionPermutation => {
-      _.forEach(PuzzleSolver.allBlockToOrientationMappings(), blockToOrientationMapping => {
+    _.forEach(PuzzleSolver.allBlocksAssignedToFinalPositionsPermutations(), (blocksAssignedToFinalPositionPermutation) => { // eslint-disable-line max-len
+      _.forEach(PuzzleSolver.allBlockToOrientationMappings(), (blockToOrientationMapping) => {
         const puzzleSolution = PuzzleSolutionInitializer.createInitialPuzzleSolution(
           blocksAssignedToFinalPositionPermutation,
-          blockToOrientationMapping
+          blockToOrientationMapping,
         );
 
         if (!puzzleSolution.puzzleStates[0].hasNoOverlap()) {
@@ -149,7 +162,7 @@ class PuzzleSolver {
         PuzzleSolver.unwindPuzzle(puzzleSolution);
       });
     });
-  };
+  }
 }
 
 export default PuzzleSolver;

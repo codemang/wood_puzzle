@@ -1,7 +1,6 @@
 import _ from 'lodash';
-import { minVertex } from './vertex_helpers.js';
-import md5 from "blueimp-md5";
-import Block from './block.js';
+import md5 from 'blueimp-md5';
+import { minVertex } from './vertex_helpers';
 
 class PuzzleState {
   constructor(blocks = []) {
@@ -10,7 +9,7 @@ class PuzzleState {
   }
 
   clone() {
-    return new PuzzleState(_.map(this.blocks, block => block.clone()));
+    return new PuzzleState(_.map(this.blocks, (block) => block.clone()));
   }
 
   addBlock(block) {
@@ -26,7 +25,7 @@ class PuzzleState {
   hasNoOverlap() {
     const allVertices = _.flatten(_.map(this.blocks, 'vertices'));
 
-    const vertexNames = _.map(allVertices, vertex => (
+    const vertexNames = _.map(allVertices, (vertex) => (
       _.join(vertex, '-')
     ));
 
@@ -36,10 +35,10 @@ class PuzzleState {
   }
 
   normalizeBlocks() {
-    const smallestVertex = minVertex(_.map(this.blocks, block => block.minVertex()));
-    const offsetToSmallestVertex = _.map(smallestVertex, vertexPoint => -vertexPoint);
+    const smallestVertex = minVertex(_.map(this.blocks, (block) => block.minVertex()));
+    const offsetToSmallestVertex = _.map(smallestVertex, (vertexPoint) => -vertexPoint);
 
-    return _.map(this.blocks, block => {
+    return _.map(this.blocks, (block) => {
       const newBlock = block.clone();
       newBlock.translate(offsetToSmallestVertex);
       return newBlock;
@@ -51,6 +50,6 @@ class PuzzleState {
     const signature = md5(_.join(_.flattenDeep(_.map(normalizedBlocks, 'vertices'))));
     this.signature = signature;
   }
-};
+}
 
 export default PuzzleState;

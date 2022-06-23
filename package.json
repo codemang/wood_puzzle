@@ -1,10 +1,18 @@
 {
-  "scripts": {},
+  "scripts": {
+    "lint": "eslint '**/*.{js,jsx}'",
+    "test": "node --es-module-specifier-resolution=node ./test/compute_solved_puzzle.js"
+  },
   "type": "module",
   "dependencies": {
     "blueimp-md5": "^2.19.0",
     "js-combinatorics": "^1.5.7",
     "lodash": "^4.17.21",
     "three": "^0.111.0"
+  },
+  "devDependencies": {
+    "eslint": "^7.32.0 || ^8.2.0",
+    "eslint-config-airbnb-base": "^15.0.0",
+    "eslint-plugin-import": "^2.25.2"
   }
 }
