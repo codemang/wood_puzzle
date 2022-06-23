@@ -1,17 +1,10 @@
 {
-  "scripts": {
-    "babel": "babel js/main.js -d build",
-    "start": "http-server",
-    "webpack": "webpack"
-  },
+  "scripts": {},
+  "type": "module",
   "dependencies": {
+    "blueimp-md5": "^2.19.0",
+    "js-combinatorics": "^1.5.7",
+    "lodash": "^4.17.21",
     "three": "^0.111.0"
-  },
-  "devDependencies": {
-    "babel-cli": "^6.26.0",
-    "babel-loader": "^8.0.6",
-    "babel-preset-env": "^1.7.0",
-    "webpack": "^4.41.5",
-    "webpack-cli": "^3.3.10"
   }
 }
